@@ -90,6 +90,8 @@ def parse_args():
     parser.add_argument('--dropout', default=0., type=float)
     parser.add_argument('--attention_dropout', default=0., type=float)
     parser.add_argument('--relu_dropout', default=0., type=float)
+    
+    parser.add_argument('--wandb', default=False, action='store_true')
 
     args = parser.parse_args()
     update_args(args)
@@ -281,7 +283,7 @@ def main():
         device=device
     )
 
-    L = Logger(args.work_dir, use_tb=args.save_tb)
+    L = Logger(args.work_dir, use_tb=args.save_tb, wandb=args.wandb, args=args)
 
     episode, episode_reward, done = 0, 0, True
     start_time = time.time()

@@ -6,6 +6,7 @@ import shutil
 import torch
 import torchvision
 import numpy as np
+import wandb
 from termcolor import colored
 
 FORMAT_CONFIG = {
@@ -91,7 +92,7 @@ class MetersGroup(object):
 
 
 class Logger(object):
-    def __init__(self, log_dir, use_tb=True, config='rl'):
+    def __init__(self, log_dir, use_tb=True, config='rl', wandb=False, args=None):
         self._log_dir = log_dir
         if use_tb:
             tb_dir = os.path.join(log_dir, 'tb')
@@ -108,6 +109,11 @@ class Logger(object):
             os.path.join(log_dir, 'eval.log'),
             formating=FORMAT_CONFIG[config]['eval']
         )
+        self.use_wandb = wandb
+        if self.use_wandb:
+            wandb.init(project='visualRL', 
+                       config=vars(args),
+                       name=f'MCURL_{args.domain_name}_{args.task_name}_runseed_{args.seed}')
 
     def _try_sw_log(self, key, value, step):
         if self._sw is not None:
@@ -136,6 +142,8 @@ class Logger(object):
         self._try_sw_log(key, value / n, step)
         mg = self._train_mg if key.startswith('train') else self._eval_mg
         mg.log(key, value, n)
+        if self.use_wandb:
+            wandb.log({key: value}, step=step)
 
     def log_param(self, key, param, step):
         self.log_histogram(key + '_w', param.weight.data, step)

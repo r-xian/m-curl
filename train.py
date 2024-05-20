@@ -36,7 +36,7 @@ def parse_args():
     # train
     parser.add_argument('--agent', default='ctmr_sac', type=str)
     parser.add_argument('--init_steps', default=1000, type=int)
-    parser.add_argument('--num_train_steps', type=int)
+    parser.add_argument('--num_train_steps', default=100000, type=int)
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--hidden_dim', default=1024, type=int)
     # eval

@@ -267,7 +267,7 @@ class CTMR(nn.Module):
 
     def encode_obs(self, obs, detach=False, ema=False):
         # 1. Encoder
-        debug.info(f'ctmr_sac.py - CTMR encode_obs()')
+        debug.info(f'START: CTMR encode_obs()')
         x = obs.view(-1, *obs.shape[2:])
         debug.info(f'  x: {x.shape}')
         if ema:
@@ -279,15 +279,16 @@ class CTMR(nn.Module):
         
         if detach:
             z_out = z_out.detach()
+        debug.info(f'END: CTMR encode_obs()')
         return z_out.view(self.mtm_bsz, -1, *z_out.shape[1:])
 
 
 
     def forward(self, obs, mtm=False, ema=False, detach=False):
-        debug.info(f'ctmr_sac.py - CTMR forward()')
+        debug.info(f'START: CTMR forward()')
         obs = self.encode_obs(obs, detach=detach, ema=ema)
         #2. Transformer
-        debug.info(f'Transformer for CTMR')
+        debug.info(f' Transformer for CTMR')
         if not mtm:
             return obs.reshape(-1, *obs.shape[2:])
         length = obs.shape[1]
@@ -304,6 +305,7 @@ class CTMR(nn.Module):
         debug.info(f'  x transposed back: {x.shape}')
         x = x.reshape(-1, *obs.shape[2:])
         debug.info(f'  x reshaped: {x.shape}')
+        debug.info(f'END: CTMR forward()')
         return x 
 
 
@@ -562,7 +564,7 @@ class CtmrSacAgent(object):
         self.log_alpha_optimizer.step()
 
     def update_cpc(self, cpc_kwargs, L, step):
-        debug.info(f'ctmr_sac.py - update_cpc()')
+        debug.info(f'START: CtmrSacAgent - update_cpc()')
         #1. sampling
         debug.info(f'1. Sampling')
         obses = cpc_kwargs['obses']
@@ -600,7 +602,7 @@ class CtmrSacAgent(object):
         
         loss =  self.cross_entropy_loss(logits, true_idx)
 
-        debug.info(f'END OF UPDATE____________\n')
+        debug.info(f'END: CtmrSacAgent - update_cpc() ____________\n')
         
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()

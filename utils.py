@@ -176,7 +176,7 @@ class ReplayBuffer(Dataset):
         return obses, actions, rewards, next_obses, not_dones
 
     def sample_ctmr(self):
-        debug.info(f'Utils.py - sample_ctmr()')
+        debug.info(f'START: ReplayBuffer - sample_ctmr()')
         # 1. creating idxs
         debug.info(f'1. creating idxs')
         idxs = np.random.randint(
@@ -222,7 +222,7 @@ class ReplayBuffer(Dataset):
         debug.info(f'   obses {obses.shape}')
         obses_label = torch.as_tensor(obses_label, device=self.device).float()
         debug.info(f'   obses_label {obses_label.shape}')
-        debug.info(f'END OF SAMPLING_______________\n')
+        debug.info(f'END: ReplayBuffer - sample_cmtr()_______________\n')
         return (*self.sample_cpc(), dict(obses=obses, obses_label=obses_label,
                     non_masked=non_masked ))
 

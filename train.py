@@ -24,6 +24,7 @@ from hyperpara import update_args
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 os.environ['MUJOCO_GL'] = 'egl'
+logging.basicConfig(level=logging.INFO)
 debug = logging.getLogger(__name__)
 
 def parse_args():
@@ -255,8 +256,8 @@ def main():
         device=device
     )
 
-    logging.basicConfig(level=logging.INFO)
-    debug.info(f'Start training')
+
+        
     L = Logger(args.work_dir, use_tb=args.save_tb, wandb=args.wandb, args=args)
 
     episode, episode_reward, done = 0, 0, True

@@ -197,7 +197,7 @@ class ReplayBuffer(Dataset):
         debug.info(f'2. creating non_masked')
         non_masked = np.zeros((self.mtm_bsz, self.mtm_length), dtype=np.bool)
         debug.info(f'   non_masked {non_masked.shape}')
-        debug.info(f'   contents non_masked {non_masked}')
+        # debug.info(f'   contents non_masked {non_masked}')
         
         # 3. Masking obses
         debug.info(f'3. Masking obses')

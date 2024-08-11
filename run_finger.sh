@@ -16,7 +16,10 @@ source $EBROOTMINICONDA3/etc/profile.d/conda.sh
 conda activate mcurl
 cd /home/s4642506/m-curl
 
-srun sh script/train.sh
+srun python train.py \
+  --domain_name finger --task_name spin \
+  --work_dir ./run --agent ctmr_sac \
+  --seed 1
 
 
 # --domain_name finger --task_name spin

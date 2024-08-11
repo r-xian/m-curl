@@ -446,7 +446,7 @@ class CtmrSacAgent(object):
             [self.log_alpha], lr=alpha_lr, betas=(alpha_beta, 0.999)
         )
         if self.encoder_type == 'pixel':
-            self.CTMR = CTMR(encoder_feature_dim,  self.critic, self.critic_target,
+            self.CTMR = CTMR(self.debug, encoder_feature_dim,  self.critic, self.critic_target,
                              output_type='continuous', num_attn_layer=num_attn_layer,
                              mtm_bsz=mtm_bsz, normalize_before=normalize_before,
                              dropout=dropout, attention_dropout=attention_dropout,

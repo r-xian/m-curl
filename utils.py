@@ -220,7 +220,7 @@ class ReplayBuffer(Dataset):
         self.debug.info(f' obses {obses.shape}')
         obses_label = torch.as_tensor(obses_label, device=self.device).float()
         self.debug.info(f' obses_label {obses_label.shape}')
-        self.debug.info(f'__________\n')
+        self.debug.info(f'END OF SAMPLING_______________\n')
         return (*self.sample_cpc(), dict(obses=obses, obses_label=obses_label,
                     non_masked=non_masked ))
 

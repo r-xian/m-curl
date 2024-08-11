@@ -266,15 +266,15 @@ class CTMR(nn.Module):
 
     def encode_obs(self, obs, detach=False, ema=False):
         # 1. Encoder
-        self.debug.info(f'1. Encoder for CTMR')
+        self.debug.info(f'ctmr_sac.py - CTMR encode_obs()')
         x = obs.view(-1, *obs.shape[2:])
-        self.debug.info(f'x: {x.shape}')
+        self.debug.info(f'  x: {x.shape}')
         if ema:
             with torch.no_grad():
                 z_out = self.encoder_target(x)
         else:
             z_out = self.encoder(x)
-        self.debug.info(f'z_out: {z_out.shape}')
+        self.debug.info(f'  z_out: {z_out.shape}')
         
         if detach:
             z_out = z_out.detach()
@@ -283,26 +283,27 @@ class CTMR(nn.Module):
 
 
     def forward(self, obs, mtm=False, ema=False, detach=False):
+        self.debug.info(f'ctmr_sac.py - CTMR forward()')
         obs = self.encode_obs(obs, detach=detach, ema=ema)
         #2. Transformer
-        self.debug.info(f'2. Transformer for CTMR')
+        self.debug.info(f'Transformer for CTMR')
         if not mtm:
             return obs.reshape(-1, *obs.shape[2:])
         # self.debug.info(f'obs: {obs.shape}')
         length = obs.shape[1]
         position = self.position(length)
-        self.debug.info(f'position: {position.shape}')
+        self.debug.info(f'  position: {position.shape}')
         x = obs + position
-        self.debug.info(f'x with pos embed: {x.shape}')
+        self.debug.info(f'  x with pos embed: {x.shape}')
         x = x.transpose(0, 1)
-        self.debug.info(f'x transposed: {x.shape}')
+        self.debug.info(f'  x transposed: {x.shape}')
         for i in range(len(self.attn_layers)):
             x = self.attn_layers[i](x)
-        self.debug.info(f'x after transformer: {x.shape}')
+        self.debug.info(f'  x after transformer: {x.shape}')
         x = x.transpose(0, 1)
-        self.debug.info(f'x transposed back: {x.shape}')
+        self.debug.info(f'  x transposed back: {x.shape}')
         x = x.reshape(-1, *obs.shape[2:])
-        self.debug.info(f'x reshaped: {x.shape}')
+        self.debug.info(f'  x reshaped: {x.shape}')
         return x 
 
 
@@ -568,40 +569,40 @@ class CtmrSacAgent(object):
         self.debug.info(f'1. Sampling')
         obses = cpc_kwargs['obses']
         obses_label = cpc_kwargs['obses_label']
-        self.debug.info(f' obses: {obses.shape}')
-        self.debug.info(f' obses_label: {obses_label.shape}')
+        self.debug.info(f'   obses: {obses.shape}')
+        self.debug.info(f'   obses_label: {obses_label.shape}')
         
         non_masked = cpc_kwargs['non_masked']
         non_masked = non_masked.reshape(-1)
-        self.debug.info(f' non_masked: {non_masked.shape}')
+        self.debug.info(f'   non_masked: {non_masked.shape}')
         
         #2. compute z_a and z_pos
         self.debug.info(f'2. Compute z_a and z_pos')
         x = self.CTMR(obses, mtm=True)
         label = self.CTMR(obses_label, ema=True)
-        self.debug.info(f' x (after encoded+transformer): {x.shape}')
-        self.debug.info(f' label (after encoded+transformer): {label.shape}')
+        self.debug.info(f'   x (after encoded+transformer): {x.shape}')
+        self.debug.info(f'   label (after encoded+transformer): {label.shape}')
         
         #3. true index
         self.debug.info(f'3. True index')
         true_idx = torch.arange(x.shape[0] ).long().to(label.device)
-        self.debug.info(f' true_idx: {true_idx.shape}')
+        self.debug.info(f'   true_idx: {true_idx.shape}')
         
         #4. getting only masks
         self.debug.info(f'4. selecting masked observations')
         x = x[non_masked]
-        self.debug.info(f' x (after masked): {x.shape}')
+        self.debug.info(f'   x (after masked): {x.shape}')
         true_idx = true_idx[non_masked]
-        self.debug.info(f' true_idx (after masked): {true_idx.shape}')
+        self.debug.info(f'   true_idx (after masked): {true_idx.shape}')
         
         #5. compute logits
         self.debug.info(f'5. Compute logits')
         logits = self.CTMR.compute_logits(x, label)
-        self.debug.info(f' logits: {logits.shape}')
+        self.debug.info(f'   logits: {logits.shape}')
         
         loss =  self.cross_entropy_loss(logits, true_idx)
 
-        self.debug.info(f'_____\n')
+        self.debug.info(f'END OF UPDATE____________\n')
         
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()

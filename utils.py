@@ -181,45 +181,45 @@ class ReplayBuffer(Dataset):
             0, self.capacity-self.mtm_length if self.full else self.idx-self.mtm_length,
             size=self.mtm_bsz
         )
-        self.debug.info(f' idxs {idxs.shape}')
+        self.debug.info(f'   idxs {idxs.shape}')
         idxs = idxs.reshape(-1, 1)
-        self.debug.info(f' idxs reshaped {idxs.shape}')
+        self.debug.info(f'   idxs reshaped {idxs.shape}')
         step = np.arange(self.mtm_length).reshape(1, -1)
-        self.debug.info(f' arrange step {step.shape}')
+        self.debug.info(f'   arrange step {step.shape}')
         idxs = idxs + step
-        self.debug.info(f' idxs + step {idxs.shape}')
+        self.debug.info(f'   idxs + step {idxs.shape}')
         obses_label = self.obses[idxs]
-        self.debug.info(f' obses_label[idxs] {obses_label.shape}')
+        self.debug.info(f'   obses_label[idxs] {obses_label.shape}')
         
         # 2. creating non_masked
         self.debug.info(f'2. creating non_masked')
         non_masked = np.zeros((self.mtm_bsz, self.mtm_length), dtype=np.bool)
-        self.debug.info(f' non_masked {non_masked.shape}')
-        self.debug.info(f' contents non_masked {non_masked}')
+        self.debug.info(f'   non_masked {non_masked.shape}')
+        self.debug.info(f'   contents non_masked {non_masked}')
         
         # 3. Masking obses
         self.debug.info(f'3. Masking obses')
         obses = self.random_obs(obses_label, non_masked)
-        self.debug.info(f' obses {obses.shape}')
-        self.debug.info(f' obses_label {obses_label.shape}')
-        self.debug.info(f' non_masked {non_masked.shape}')
-        self.debug.info(f' contents non_masked {non_masked}')   
+        self.debug.info(f'   obses {obses.shape}')
+        self.debug.info(f'   obses_label {obses_label.shape}')
+        self.debug.info(f'   non_masked {non_masked.shape}')
+        self.debug.info(f'   contents non_masked {non_masked}')   
         non_masked = torch.as_tensor(non_masked, device=self.device)
-        self.debug.info(f' non_masked as tensor {non_masked.shape}')
+        self.debug.info(f'   non_masked as tensor {non_masked.shape}')
         
         # 4. Cropping
         self.debug.info(f'4. Random Cropping obses and obses_label')
         obses_label = random_crop_2(obses_label, self.image_size)
-        self.debug.info(f' obses_label {obses_label.shape}')
+        self.debug.info(f'   obses_label {obses_label.shape}')
         obses = random_crop_2(obses, self.image_size)
-        self.debug.info(f' obses {obses.shape}')
+        self.debug.info(f'   obses {obses.shape}')
         
         # 5. Converting to tensor
         self.debug.info(f'5. Converting to tensor')
         obses = torch.as_tensor(obses, device=self.device).float()
-        self.debug.info(f' obses {obses.shape}')
+        self.debug.info(f'   obses {obses.shape}')
         obses_label = torch.as_tensor(obses_label, device=self.device).float()
-        self.debug.info(f' obses_label {obses_label.shape}')
+        self.debug.info(f'   obses_label {obses_label.shape}')
         self.debug.info(f'END OF SAMPLING_______________\n')
         return (*self.sample_cpc(), dict(obses=obses, obses_label=obses_label,
                     non_masked=non_masked ))

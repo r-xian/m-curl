@@ -21,6 +21,10 @@ from torchvision import transforms
 from ctmr_sac import CtmrSacAgent
 from hyperpara import update_args
 
+os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
+os.environ['MUJOCO_GL'] = 'egl'
+
+
 def parse_args():
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     # environment

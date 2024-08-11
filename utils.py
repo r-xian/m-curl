@@ -205,9 +205,9 @@ class ReplayBuffer(Dataset):
         debug.info(f'   obses {obses.shape}')
         debug.info(f'   obses_label {obses_label.shape}')
         debug.info(f'   non_masked {non_masked.shape}')
-        debug.info(f'   contents non_masked {non_masked}')   
+        # debug.info(f'   contents non_masked {non_masked}')   
         non_masked = torch.as_tensor(non_masked, device=self.device)
-        debug.info(f'   non_masked as tensor {non_masked.shape}')
+        # debug.info(f'   non_masked as tensor {non_masked.shape}')
         
         # 4. Cropping
         debug.info(f'4. Random Cropping obses and obses_label')

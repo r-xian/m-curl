@@ -12,6 +12,8 @@ from encoder import make_encoder
 from utils import PositionalEmbedding
 LOG_FREQ = 10000
 
+import logging
+debug = logging.getLogger(__name__)
 
 def gaussian_logprob(noise, log_std):
     """Compute Gaussian log probability."""
@@ -246,7 +248,7 @@ class AttnLayer(nn.Module):
 
 class CTMR(nn.Module):
 
-    def __init__(self, debug, z_dim,  critic, critic_target,
+    def __init__(self, z_dim,  critic, critic_target,
                  output_type="continuous", num_attn_layer=2,
                  mtm_bsz=64, normalize_before=False,
                  relu_dropout=0.,
@@ -254,7 +256,6 @@ class CTMR(nn.Module):
                  dropout=0.,
                  ):
         super().__init__()
-        self.debug = debug
         self.mtm_bsz = mtm_bsz
         self.encoder = critic.encoder
         self.encoder_target = critic_target.encoder
@@ -266,15 +267,15 @@ class CTMR(nn.Module):
 
     def encode_obs(self, obs, detach=False, ema=False):
         # 1. Encoder
-        self.debug.info(f'ctmr_sac.py - CTMR encode_obs()')
+        debug.info(f'ctmr_sac.py - CTMR encode_obs()')
         x = obs.view(-1, *obs.shape[2:])
-        self.debug.info(f'  x: {x.shape}')
+        debug.info(f'  x: {x.shape}')
         if ema:
             with torch.no_grad():
                 z_out = self.encoder_target(x)
         else:
             z_out = self.encoder(x)
-        self.debug.info(f'  z_out: {z_out.shape}')
+        debug.info(f'  z_out: {z_out.shape}')
         
         if detach:
             z_out = z_out.detach()
@@ -283,27 +284,26 @@ class CTMR(nn.Module):
 
 
     def forward(self, obs, mtm=False, ema=False, detach=False):
-        self.debug.info(f'ctmr_sac.py - CTMR forward()')
+        debug.info(f'ctmr_sac.py - CTMR forward()')
         obs = self.encode_obs(obs, detach=detach, ema=ema)
         #2. Transformer
-        self.debug.info(f'Transformer for CTMR')
+        debug.info(f'Transformer for CTMR')
         if not mtm:
             return obs.reshape(-1, *obs.shape[2:])
-        # self.debug.info(f'obs: {obs.shape}')
         length = obs.shape[1]
         position = self.position(length)
-        self.debug.info(f'  position: {position.shape}')
+        debug.info(f'  position: {position.shape}')
         x = obs + position
-        self.debug.info(f'  x with pos embed: {x.shape}')
+        debug.info(f'  x with pos embed: {x.shape}')
         x = x.transpose(0, 1)
-        self.debug.info(f'  x transposed: {x.shape}')
+        debug.info(f'  x transposed: {x.shape}')
         for i in range(len(self.attn_layers)):
             x = self.attn_layers[i](x)
-        self.debug.info(f'  x after transformer: {x.shape}')
+        debug.info(f'  x after transformer: {x.shape}')
         x = x.transpose(0, 1)
-        self.debug.info(f'  x transposed back: {x.shape}')
+        debug.info(f'  x transposed back: {x.shape}')
         x = x.reshape(-1, *obs.shape[2:])
-        self.debug.info(f'  x reshaped: {x.shape}')
+        debug.info(f'  x reshaped: {x.shape}')
         return x 
 
 
@@ -361,7 +361,6 @@ class AnneallingSchedule(object):
 class CtmrSacAgent(object):
 
     def __init__(self,
-                 debug,
                  obs_shape,
                  action_shape,
                  device,
@@ -401,7 +400,6 @@ class CtmrSacAgent(object):
                  attention_dropout=0.,
                  dropout=0.,
                  ):
-        self.debug = debug
         self.device = device
         self.discount = discount
         self.critic_tau = critic_tau
@@ -446,7 +444,7 @@ class CtmrSacAgent(object):
             [self.log_alpha], lr=alpha_lr, betas=(alpha_beta, 0.999)
         )
         if self.encoder_type == 'pixel':
-            self.CTMR = CTMR(self.debug, encoder_feature_dim,  self.critic, self.critic_target,
+            self.CTMR = CTMR(encoder_feature_dim,  self.critic, self.critic_target,
                              output_type='continuous', num_attn_layer=num_attn_layer,
                              mtm_bsz=mtm_bsz, normalize_before=normalize_before,
                              dropout=dropout, attention_dropout=attention_dropout,
@@ -564,45 +562,45 @@ class CtmrSacAgent(object):
         self.log_alpha_optimizer.step()
 
     def update_cpc(self, cpc_kwargs, L, step):
-        self.debug.info(f'ctmr_sac.py - update_cpc()')
+        debug.info(f'ctmr_sac.py - update_cpc()')
         #1. sampling
-        self.debug.info(f'1. Sampling')
+        debug.info(f'1. Sampling')
         obses = cpc_kwargs['obses']
         obses_label = cpc_kwargs['obses_label']
-        self.debug.info(f'   obses: {obses.shape}')
-        self.debug.info(f'   obses_label: {obses_label.shape}')
+        debug.info(f'   obses: {obses.shape}')
+        debug.info(f'   obses_label: {obses_label.shape}')
         
         non_masked = cpc_kwargs['non_masked']
         non_masked = non_masked.reshape(-1)
-        self.debug.info(f'   non_masked: {non_masked.shape}')
+        debug.info(f'   non_masked: {non_masked.shape}')
         
         #2. compute z_a and z_pos
-        self.debug.info(f'2. Compute z_a and z_pos')
+        debug.info(f'2. Compute z_a and z_pos')
         x = self.CTMR(obses, mtm=True)
         label = self.CTMR(obses_label, ema=True)
-        self.debug.info(f'   x (after encoded+transformer): {x.shape}')
-        self.debug.info(f'   label (after encoded+transformer): {label.shape}')
+        debug.info(f'   x (after encoded+transformer): {x.shape}')
+        debug.info(f'   label (after encoded+transformer): {label.shape}')
         
         #3. true index
-        self.debug.info(f'3. True index')
+        debug.info(f'3. True index')
         true_idx = torch.arange(x.shape[0] ).long().to(label.device)
-        self.debug.info(f'   true_idx: {true_idx.shape}')
+        debug.info(f'   true_idx: {true_idx.shape}')
         
         #4. getting only masks
-        self.debug.info(f'4. selecting masked observations')
+        debug.info(f'4. selecting masked observations')
         x = x[non_masked]
-        self.debug.info(f'   x (after masked): {x.shape}')
+        debug.info(f'   x (after masked): {x.shape}')
         true_idx = true_idx[non_masked]
-        self.debug.info(f'   true_idx (after masked): {true_idx.shape}')
+        debug.info(f'   true_idx (after masked): {true_idx.shape}')
         
         #5. compute logits
-        self.debug.info(f'5. Compute logits')
+        debug.info(f'5. Compute logits')
         logits = self.CTMR.compute_logits(x, label)
-        self.debug.info(f'   logits: {logits.shape}')
+        debug.info(f'   logits: {logits.shape}')
         
         loss =  self.cross_entropy_loss(logits, true_idx)
 
-        self.debug.info(f'END OF UPDATE____________\n')
+        debug.info(f'END OF UPDATE____________\n')
         
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()
@@ -627,25 +625,25 @@ class CtmrSacAgent(object):
             L.log('train/batch_reward', reward.mean(), step)
 
 
-        self.update_critic(obs, action, reward, next_obs, not_done, L, step)
+        # self.update_critic(obs, action, reward, next_obs, not_done, L, step)
 
-        if step % self.actor_update_freq == 0:
-            self.update_actor_and_alpha(obs, L, step)
+        # if step % self.actor_update_freq == 0:
+        #     self.update_actor_and_alpha(obs, L, step)
 
-        if step % self.critic_target_update_freq == 0:
-            utils.soft_update_params(
-                self.critic.Q1, self.critic_target.Q1, self.critic_tau
-            )
-            utils.soft_update_params(
-                self.critic.Q2, self.critic_target.Q2, self.critic_tau
-            )
-            utils.soft_update_params(
-                self.critic.encoder, self.critic_target.encoder,
-                self.encoder_tau
-            )
+        # if step % self.critic_target_update_freq == 0:
+        #     utils.soft_update_params(
+        #         self.critic.Q1, self.critic_target.Q1, self.critic_tau
+        #     )
+        #     utils.soft_update_params(
+        #         self.critic.Q2, self.critic_target.Q2, self.critic_tau
+        #     )
+        #     utils.soft_update_params(
+        #         self.critic.encoder, self.critic_target.encoder,
+        #         self.encoder_tau
+        #     )
 
-        if step % self.cpc_update_freq == 0 and self.encoder_type == 'pixel':
-            self.update_cpc(cpc_kwargs, L, step)
+        # if step % self.cpc_update_freq == 0 and self.encoder_type == 'pixel':
+        self.update_cpc(cpc_kwargs, L, step)
 
 
     def save(self, model_dir, step):

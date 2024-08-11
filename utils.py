@@ -9,6 +9,9 @@ from torch.utils.data import Dataset, DataLoader
 import time
 from skimage.util.shape import view_as_windows
 import math
+import logging
+
+debug = logging.getLogger(__name__)
 
 class eval_mode(object):
     def __init__(self, *models):
@@ -95,12 +98,11 @@ class PositionalEmbedding(nn.Module):
 
 class ReplayBuffer(Dataset):
     """Buffer to store environment transitions."""
-    def __init__(self, debug, obs_shape, action_shape, capacity, batch_size, device,image_size=84,transform=None,
+    def __init__(self, obs_shape, action_shape, capacity, batch_size, device,image_size=84,transform=None,
                  mtm_bsz=64,
                  mtm_length=10,
                  mtm_ratio=0.15
                  ):
-        self.debug = debug
         self.capacity = capacity
         self.batch_size = batch_size
         self.device = device
@@ -174,53 +176,53 @@ class ReplayBuffer(Dataset):
         return obses, actions, rewards, next_obses, not_dones
 
     def sample_ctmr(self):
-        self.debug.info(f'Utils.py - sample_ctmr()')
+        debug.info(f'Utils.py - sample_ctmr()')
         # 1. creating idxs
-        self.debug.info(f'1. creating idxs')
+        debug.info(f'1. creating idxs')
         idxs = np.random.randint(
             0, self.capacity-self.mtm_length if self.full else self.idx-self.mtm_length,
             size=self.mtm_bsz
         )
-        self.debug.info(f'   idxs {idxs.shape}')
+        debug.info(f'   idxs {idxs.shape}')
         idxs = idxs.reshape(-1, 1)
-        self.debug.info(f'   idxs reshaped {idxs.shape}')
+        debug.info(f'   idxs reshaped {idxs.shape}')
         step = np.arange(self.mtm_length).reshape(1, -1)
-        self.debug.info(f'   arrange step {step.shape}')
+        debug.info(f'   arrange step {step.shape}')
         idxs = idxs + step
-        self.debug.info(f'   idxs + step {idxs.shape}')
+        debug.info(f'   idxs + step {idxs.shape}')
         obses_label = self.obses[idxs]
-        self.debug.info(f'   obses_label[idxs] {obses_label.shape}')
+        debug.info(f'   obses_label[idxs] {obses_label.shape}')
         
         # 2. creating non_masked
-        self.debug.info(f'2. creating non_masked')
+        debug.info(f'2. creating non_masked')
         non_masked = np.zeros((self.mtm_bsz, self.mtm_length), dtype=np.bool)
-        self.debug.info(f'   non_masked {non_masked.shape}')
-        self.debug.info(f'   contents non_masked {non_masked}')
+        debug.info(f'   non_masked {non_masked.shape}')
+        debug.info(f'   contents non_masked {non_masked}')
         
         # 3. Masking obses
-        self.debug.info(f'3. Masking obses')
+        debug.info(f'3. Masking obses')
         obses = self.random_obs(obses_label, non_masked)
-        self.debug.info(f'   obses {obses.shape}')
-        self.debug.info(f'   obses_label {obses_label.shape}')
-        self.debug.info(f'   non_masked {non_masked.shape}')
-        self.debug.info(f'   contents non_masked {non_masked}')   
+        debug.info(f'   obses {obses.shape}')
+        debug.info(f'   obses_label {obses_label.shape}')
+        debug.info(f'   non_masked {non_masked.shape}')
+        debug.info(f'   contents non_masked {non_masked}')   
         non_masked = torch.as_tensor(non_masked, device=self.device)
-        self.debug.info(f'   non_masked as tensor {non_masked.shape}')
+        debug.info(f'   non_masked as tensor {non_masked.shape}')
         
         # 4. Cropping
-        self.debug.info(f'4. Random Cropping obses and obses_label')
+        debug.info(f'4. Random Cropping obses and obses_label')
         obses_label = random_crop_2(obses_label, self.image_size)
-        self.debug.info(f'   obses_label {obses_label.shape}')
+        debug.info(f'   obses_label {obses_label.shape}')
         obses = random_crop_2(obses, self.image_size)
-        self.debug.info(f'   obses {obses.shape}')
+        debug.info(f'   obses {obses.shape}')
         
         # 5. Converting to tensor
-        self.debug.info(f'5. Converting to tensor')
+        debug.info(f'5. Converting to tensor')
         obses = torch.as_tensor(obses, device=self.device).float()
-        self.debug.info(f'   obses {obses.shape}')
+        debug.info(f'   obses {obses.shape}')
         obses_label = torch.as_tensor(obses_label, device=self.device).float()
-        self.debug.info(f'   obses_label {obses_label.shape}')
-        self.debug.info(f'END OF SAMPLING_______________\n')
+        debug.info(f'   obses_label {obses_label.shape}')
+        debug.info(f'END OF SAMPLING_______________\n')
         return (*self.sample_cpc(), dict(obses=obses, obses_label=obses_label,
                     non_masked=non_masked ))
 

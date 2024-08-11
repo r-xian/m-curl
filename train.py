@@ -13,6 +13,7 @@ import copy
 from termcolor import colored
 
 import logging
+
 import utils
 from logger import Logger
 from video import VideoRecorder
@@ -23,7 +24,7 @@ from hyperpara import update_args
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 os.environ['MUJOCO_GL'] = 'egl'
-
+debug = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
@@ -39,7 +40,7 @@ def parse_args():
     parser.add_argument('--replay_buffer_capacity', default=100000, type=int)
     # train
     parser.add_argument('--agent', default='ctmr_sac', type=str)
-    parser.add_argument('--init_steps', default=1000, type=int)
+    parser.add_argument('--init_steps', default=500, type=int)
     parser.add_argument('--num_train_steps', default=100000, type=int)
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--hidden_dim', default=1024, type=int)
@@ -140,9 +141,8 @@ def evaluate(env, agent, video, num_episodes, L, step, args):
     L.dump(step)
 
 
-def make_agent(debug, obs_shape, action_shape, args, device):
+def make_agent(obs_shape, action_shape, args, device):
     return CtmrSacAgent(
-            debug=debug,
             obs_shape=obs_shape,
             action_shape=action_shape,
             device=device,
@@ -236,11 +236,7 @@ def main():
         obs_shape = env.observation_space.shape
         pre_aug_obs_shape = obs_shape
 
-    logging.basicConfig(level=logging.INFO)
-    debugger = logging.getLogger(__name__)
-
     replay_buffer = utils.ReplayBuffer(
-        debug=debugger,
         obs_shape=pre_aug_obs_shape,
         action_shape=action_shape,
         capacity=args.replay_buffer_capacity,
@@ -253,13 +249,14 @@ def main():
     )
 
     agent = make_agent(
-        debug=debugger,
         obs_shape=obs_shape,
         action_shape=action_shape,
         args=args,
         device=device
     )
 
+    logging.basicConfig(level=logging.INFO)
+    debug.info(f'Start training')
     L = Logger(args.work_dir, use_tb=args.save_tb, wandb=args.wandb, args=args)
 
     episode, episode_reward, done = 0, 0, True
@@ -317,8 +314,8 @@ def main():
             done
         )
         episode_reward += reward
-        debugger.info(f"Train.py - adding obs to buffer: {obs.shape}")
-        debugger.info(f"_____________________________\n")
+        debug.info(f"Train.py - adding obs to buffer: {obs.shape}")
+        debug.info(f"_____________________________\n")
         replay_buffer.add(obs, action, reward, next_obs, done_bool)
 
         obs = next_obs

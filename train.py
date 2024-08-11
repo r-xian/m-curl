@@ -313,7 +313,8 @@ def main():
             done
         )
         episode_reward += reward
-        debugger.info(f'adding obs to replay buffer with shape {obs.shape}')
+        debugger.info(f"Train.py - adding obs to buffer: {obs.shape}")
+        debugger.info(f"_____________________________\n")
         replay_buffer.add(obs, action, reward, next_obs, done_bool)
 
         obs = next_obs

@@ -17,7 +17,6 @@ import utils
 from logger import Logger
 from video import VideoRecorder
 
-from curl_sac import CurlSacAgent
 from torchvision import transforms
 from ctmr_sac import CtmrSacAgent
 from hyperpara import update_args

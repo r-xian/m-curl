@@ -563,42 +563,46 @@ class CtmrSacAgent(object):
         self.log_alpha_optimizer.step()
 
     def update_cpc(self, cpc_kwargs, L, step):
+        self.debug.info(f'ctmr_sac.py - update_cpc()')
         #1. sampling
         self.debug.info(f'1. Sampling')
         obses = cpc_kwargs['obses']
         obses_label = cpc_kwargs['obses_label']
-        self.debug.info(f'obses: {obses.shape}')
-        self.debug.info(f'obses_label: {obses_label.shape}')
+        self.debug.info(f' obses: {obses.shape}')
+        self.debug.info(f' obses_label: {obses_label.shape}')
         
         non_masked = cpc_kwargs['non_masked']
         non_masked = non_masked.reshape(-1)
-        self.debug.info(f'non_masked: {non_masked.shape}')
+        self.debug.info(f' non_masked: {non_masked.shape}')
         
         #2. compute z_a and z_pos
         self.debug.info(f'2. Compute z_a and z_pos')
         x = self.CTMR(obses, mtm=True)
         label = self.CTMR(obses_label, ema=True)
-        self.debug.info(f'x (after encoded+transformer): {x.shape}')
-        self.debug.info(f'label (after encoded+transformer): {label.shape}')
+        self.debug.info(f' x (after encoded+transformer): {x.shape}')
+        self.debug.info(f' label (after encoded+transformer): {label.shape}')
         
         #3. true index
         self.debug.info(f'3. True index')
         true_idx = torch.arange(x.shape[0] ).long().to(label.device)
-        self.debug.info(f'true_idx: {true_idx.shape}')
+        self.debug.info(f' true_idx: {true_idx.shape}')
         
         #4. getting only masks
-        self.debug.info(f'4. Getting only masks')
+        self.debug.info(f'4. selecting masked observations')
         x = x[non_masked]
+        self.debug.info(f' x (after masked): {x.shape}')
         true_idx = true_idx[non_masked]
-        self.debug.info(f'x (after masked): {x.shape}')
+        self.debug.info(f' true_idx (after masked): {true_idx.shape}')
         
         #5. compute logits
         self.debug.info(f'5. Compute logits')
         logits = self.CTMR.compute_logits(x, label)
-        self.debug.info(f'logits: {logits.shape}')
+        self.debug.info(f' logits: {logits.shape}')
         
         loss =  self.cross_entropy_loss(logits, true_idx)
 
+        self.debug.info(f'_____\n')
+        
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()
         L.log('train/ctmr_loss', loss, step)
@@ -611,10 +615,6 @@ class CtmrSacAgent(object):
             if self.encoder_lrscheduler is not None:
                 self.encoder_lrscheduler.step()
                 L.log('train/ctmr_encoder_lr', self.encoder_optimizer.param_groups[0]['lr'], step)
-
-
-
-
 
     def update(self, replay_buffer, L, step):
         if self.encoder_type == 'pixel':

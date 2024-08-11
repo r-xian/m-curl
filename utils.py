@@ -95,11 +95,12 @@ class PositionalEmbedding(nn.Module):
 
 class ReplayBuffer(Dataset):
     """Buffer to store environment transitions."""
-    def __init__(self, obs_shape, action_shape, capacity, batch_size, device,image_size=84,transform=None,
+    def __init__(self, debug, obs_shape, action_shape, capacity, batch_size, device,image_size=84,transform=None,
                  mtm_bsz=64,
                  mtm_length=10,
                  mtm_ratio=0.15
                  ):
+        self.debug = debug
         self.capacity = capacity
         self.batch_size = batch_size
         self.device = device
@@ -158,7 +159,8 @@ class ReplayBuffer(Dataset):
       
         obses = self.obses[idxs]
         next_obses = self.next_obses[idxs]
-
+        
+        
         obses = random_crop(obses, self.image_size)
         next_obses = random_crop(next_obses, self.image_size)
 
@@ -176,6 +178,9 @@ class ReplayBuffer(Dataset):
             0, self.capacity-self.mtm_length if self.full else self.idx-self.mtm_length,
             size=self.mtm_bsz
         )
+        # 1. Sampling Cmtr
+        self.debug.info(f'1 Sampling Cmtr')
+        self.debug.info("idxs: ", idxs)
         idxs = idxs.reshape(-1, 1)
         step = np.arange(self.mtm_length).reshape(1, -1)
         idxs = idxs + step
@@ -186,7 +191,7 @@ class ReplayBuffer(Dataset):
         non_masked = torch.as_tensor(non_masked, device=self.device)
         obses_label = random_crop_2(obses_label, self.image_size)
         obses = random_crop_2(obses, self.image_size)
-
+        
         obses = torch.as_tensor(obses, device=self.device).float()
         obses_label = torch.as_tensor(obses_label, device=self.device).float()
 

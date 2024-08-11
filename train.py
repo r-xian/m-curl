@@ -12,6 +12,7 @@ import dmc2gym
 import copy
 from termcolor import colored
 
+import logging
 import utils
 from logger import Logger
 from video import VideoRecorder
@@ -137,38 +138,7 @@ def evaluate(env, agent, video, num_episodes, L, step, args):
 
 
 def make_agent(obs_shape, action_shape, args, device):
-    if args.agent == 'curl_sac':
-        return CurlSacAgent(
-            obs_shape=obs_shape,
-            action_shape=action_shape,
-            device=device,
-            hidden_dim=args.hidden_dim,
-            discount=args.discount,
-            init_temperature=args.init_temperature,
-            alpha_lr=args.alpha_lr,
-            alpha_beta=args.alpha_beta,
-            actor_lr=args.actor_lr,
-            actor_beta=args.actor_beta,
-            actor_log_std_min=args.actor_log_std_min,
-            actor_log_std_max=args.actor_log_std_max,
-            actor_update_freq=args.actor_update_freq,
-            critic_lr=args.critic_lr,
-            critic_beta=args.critic_beta,
-            critic_tau=args.critic_tau,
-            critic_target_update_freq=args.critic_target_update_freq,
-            encoder_type=args.encoder_type,
-            encoder_feature_dim=args.encoder_feature_dim,
-            encoder_lr=args.encoder_lr,
-            encoder_tau=args.encoder_tau,
-            num_layers=args.num_layers,
-            num_filters=args.num_filters,
-            log_interval=args.log_interval,
-            detach_encoder=args.detach_encoder,
-            curl_latent_dim=args.curl_latent_dim
-
-        )
-    elif args.agent == 'ctmr_sac':
-        return CtmrSacAgent(
+    CtmrSacAgent(
             obs_shape=obs_shape,
             action_shape=action_shape,
             device=device,
@@ -208,14 +178,12 @@ def make_agent(obs_shape, action_shape, args, device):
             dropout=args.dropout,
         )
 
-    else:
-        assert 'agent is not supported: %s' % args.agent
-
 def main():
     args = parse_args()
     if args.seed == -1: 
         args.__dict__["seed"] = np.random.randint(1,1000000)
     utils.set_seed_everywhere(args.seed)
+    
     env = dmc2gym.make(
         domain_name=args.domain_name,
         task_name=args.task_name,
@@ -226,7 +194,7 @@ def main():
         width=args.pre_transform_image_size,
         frame_skip=args.action_repeat
     )
- 
+
     env.seed(args.seed)
 
     # stack several consecutive frames together
@@ -264,7 +232,11 @@ def main():
         obs_shape = env.observation_space.shape
         pre_aug_obs_shape = obs_shape
 
+    logging.basicConfig(level=logging.INFO)
+    debugger = logging.getLogger(__name__)
+
     replay_buffer = utils.ReplayBuffer(
+        debug=debugger,
         obs_shape=pre_aug_obs_shape,
         action_shape=action_shape,
         capacity=args.replay_buffer_capacity,
@@ -277,6 +249,7 @@ def main():
     )
 
     agent = make_agent(
+        debug=debugger,
         obs_shape=obs_shape,
         action_shape=action_shape,
         args=args,
@@ -340,6 +313,7 @@ def main():
             done
         )
         episode_reward += reward
+        debugger.info(f'adding obs to replay buffer with shape {obs.shape}')
         replay_buffer.add(obs, action, reward, next_obs, done_bool)
 
         obs = next_obs

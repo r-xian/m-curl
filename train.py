@@ -136,8 +136,9 @@ def evaluate(env, agent, video, num_episodes, L, step, args):
     L.dump(step)
 
 
-def make_agent(obs_shape, action_shape, args, device):
+def make_agent(debug, obs_shape, action_shape, args, device):
     CtmrSacAgent(
+            debug=debug,
             obs_shape=obs_shape,
             action_shape=action_shape,
             device=device,

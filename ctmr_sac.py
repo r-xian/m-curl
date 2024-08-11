@@ -186,7 +186,7 @@ class MultiheadAttention(nn.Module):
         tgt_len, bsz, embed_dim = x.size()
         x = self.in_proj(x)
         q, k, v = x.chunk(3, dim=-1)
-        q *= self.scaling
+        q = q * self.scaling
 
         q = q.contiguous().view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
         k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)

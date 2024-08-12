@@ -310,8 +310,14 @@ class CTMR(nn.Module):
 
 
     def compute_logits(self, z_a, z_pos, phrase=2):
+        debug.info(f'START: CTMR compute_logits()')
+        debug.info(f'  z_a: {z_a.shape}')
+        debug.info(f'  z_pos: {z_pos.shape}')
         logits = torch.matmul(z_a, z_pos.T)
+        debug.info(f'  logits matmul: {logits.shape}')
         logits = logits - torch.max(logits, 1, keepdim=True)[0]
+        debug.info(f'  logits -max: {logits.shape}')
+        debug.info(f'END: CTMR compute_logits()')
         return logits
 
 
@@ -599,7 +605,6 @@ class CtmrSacAgent(object):
         debug.info(f'5. Compute logits')
         logits = self.CTMR.compute_logits(x, label)
         debug.info(f'   logits: {logits.shape}')
-        
         loss =  self.cross_entropy_loss(logits, true_idx)
 
         debug.info(f'END: CtmrSacAgent - update_cpc() ____________\n')

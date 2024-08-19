@@ -267,57 +267,67 @@ class CTMR(nn.Module):
 
     def encode_obs(self, obs, detach=False, ema=False):
         # 1. Encoder
-        debug.info(f'START: CTMR encode_obs()')
+        debug.info(f'START:     encode_obs()')
+        debug.info(f'1.     Encoder')
         x = obs.view(-1, *obs.shape[2:])
-        debug.info(f'  x: {x.shape}')
+        debug.info(f'1.1 x = obs.view() {x.shape}')
+        
         if ema:
             with torch.no_grad():
                 z_out = self.encoder_target(x)
         else:
             z_out = self.encoder(x)
-        debug.info(f'  z_out: {z_out.shape}')
+        debug.info(f'1.2 z_out = encode(x) {z_out.shape}')
         
         if detach:
             z_out = z_out.detach()
-        debug.info(f'END: CTMR encode_obs()')
-        return z_out.view(self.mtm_bsz, -1, *z_out.shape[1:])
+        
+        z_out = z_out.view(self.mtm_bsz, -1, *z_out.shape[1:])
+        debug.info(f'1.3 z_out.view() {z_out.shape}')
+        debug.info(f'END:       encode_obs()')
+        return z_out
 
 
 
     def forward(self, obs, mtm=False, ema=False, detach=False):
-        debug.info(f'START: CTMR forward()')
+        debug.info(f'START:          forward()')
+        
         obs = self.encode_obs(obs, detach=detach, ema=ema)
         #2. Transformer
-        debug.info(f' Transformer for CTMR')
+        debug.info(f'1.     Transformer for CTMR')
         if not mtm:
             return obs.reshape(-1, *obs.shape[2:])
         length = obs.shape[1]
         position = self.position(length)
-        debug.info(f'  position: {position.shape}')
+        debug.info(f'1.1 position =position_embed {position.shape}')
         x = obs + position
-        debug.info(f'  x with pos embed: {x.shape}')
+        debug.info(f'1.2 x = x+pos_embed: {x.shape}')
+        
         x = x.transpose(0, 1)
-        debug.info(f'  x transposed: {x.shape}')
+        debug.info(f'1.3 x transposed: {x.shape}')
+        
         for i in range(len(self.attn_layers)):
             x = self.attn_layers[i](x)
-        debug.info(f'  x after transformer: {x.shape}')
+        debug.info(f'1.4 x after transformer: {x.shape}')
+        
         x = x.transpose(0, 1)
-        debug.info(f'  x transposed back: {x.shape}')
+        debug.info(f'1.5 x transposed back: {x.shape}')
+        
         x = x.reshape(-1, *obs.shape[2:])
-        debug.info(f'  x reshaped: {x.shape}')
-        debug.info(f'END: CTMR forward()')
+        debug.info(f'1.6 x reshaped: {x.shape}')
+        debug.info(f'END:            forward()')
         return x 
 
 
     def compute_logits(self, z_a, z_pos, phrase=2):
-        debug.info(f'START: CTMR compute_logits()')
-        debug.info(f'  z_a: {z_a.shape}')
-        debug.info(f'  z_pos: {z_pos.shape}')
+        debug.info(f'START:        compute_logits()')
+        debug.info(f'5.1 z_a: {z_a.shape}')
+        debug.info(f'5.2 z_pos: {z_pos.shape}')
         logits = torch.matmul(z_a, z_pos.T)
-        debug.info(f'  logits matmul: {logits.shape}')
+        debug.info(f'5.3 logits = matmul(za, zpos.T): {logits.shape}')
         logits = logits - torch.max(logits, 1, keepdim=True)[0]
-        debug.info(f'  logits -max: {logits.shape}')
-        debug.info(f'END: CTMR compute_logits()')
+        debug.info(f'5.4 logits = logits - max {logits.shape}')
+        debug.info(f'END:           compute_logits()')
         return logits
 
 
@@ -572,42 +582,42 @@ class CtmrSacAgent(object):
     def update_cpc(self, cpc_kwargs, L, step):
         debug.info(f'START: CtmrSacAgent - update_cpc()')
         #1. sampling
-        debug.info(f'1. Sampling')
+        debug.info(f'1.     Sampling')
         obses = cpc_kwargs['obses']
         obses_label = cpc_kwargs['obses_label']
-        debug.info(f'   obses: {obses.shape}')
-        debug.info(f'   obses_label: {obses_label.shape}')
+        debug.info(f'1.1 obses: {obses.shape}')
+        debug.info(f'1.2 obses_label: {obses_label.shape}')
         
         non_masked = cpc_kwargs['non_masked']
         non_masked = non_masked.reshape(-1)
-        debug.info(f'   non_masked: {non_masked.shape}')
+        debug.info(f'1.3 non_masked: {non_masked.shape}')
         
         #2. compute z_a and z_pos
-        debug.info(f'2. Compute z_a and z_pos')
-        x = self.CTMR(obses, mtm=True)
-        label = self.CTMR(obses_label, ema=True)
-        debug.info(f'   x (after encoded+transformer): {x.shape}')
-        debug.info(f'   label (after encoded+transformer): {label.shape}')
+        debug.info(f'2.     Compute z_a and z_pos')
+        z_a = self.CTMR(obses, mtm=True)
+        z_pos = self.CTMR(obses_label, ema=True)
+        debug.info(f'2.1 z_a = CTMR(obses) - E+T {z_a.shape}')
+        debug.info(f'2.2 z_pos = CTMR(obses_label) - E+T: {z_pos.shape}')
         
         #3. true index
         debug.info(f'3. True index')
-        true_idx = torch.arange(x.shape[0] ).long().to(label.device)
-        debug.info(f'   true_idx: {true_idx.shape}')
+        true_idx = torch.arange(z_a.shape[0] ).long().to(z_pos.device)
+        debug.info(f'3.1 true_idx arange: {true_idx.shape}')
         
         #4. getting only masks
-        debug.info(f'4. selecting masked observations')
-        x = x[non_masked]
-        debug.info(f'   x (after masked): {x.shape}')
+        debug.info(f'4.     selecting masked observations')
+        z_a = z_a[non_masked]
+        debug.info(f'4.1 z_a[non_masked]: {z_a.shape}')
         true_idx = true_idx[non_masked]
-        debug.info(f'   true_idx (after masked): {true_idx.shape}')
+        debug.info(f'4.2 true_idx[non_masked]: {true_idx.shape}')
         
         #5. compute logits
-        debug.info(f'5. Compute logits')
-        logits = self.CTMR.compute_logits(x, label)
-        debug.info(f'   logits: {logits.shape}')
+        debug.info(f'5.     Compute logits')
+        logits = self.CTMR.compute_logits(z_a, z_pos)
+        debug.info(f'5.5 logits: {logits.shape}')
         loss =  self.cross_entropy_loss(logits, true_idx)
 
-        debug.info(f'END: CtmrSacAgent - update_cpc() ____________\n')
+        debug.info(f'END:       update_cpc()\n')
         
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()
@@ -651,7 +661,6 @@ class CtmrSacAgent(object):
 
         # if step % self.cpc_update_freq == 0 and self.encoder_type == 'pixel':
         self.update_cpc(cpc_kwargs, L, step)
-
 
     def save(self, model_dir, step):
         torch.save(

@@ -288,7 +288,6 @@ class CTMR(nn.Module):
         return z_out
 
 
-
     def forward(self, obs, mtm=False, ema=False, detach=False):
         debug.info(f'START:          forward()')
         
@@ -446,8 +445,11 @@ class CtmrSacAgent(object):
             obs_shape, action_shape, hidden_dim, encoder_type,
             encoder_feature_dim, num_layers, num_filters
         ).to(device)
+        
         self.critic_target.load_state_dict(self.critic.state_dict())
+        
         self.actor.encoder.copy_conv_weights_from(self.critic.encoder)
+        
         self.log_alpha = torch.tensor(np.log(init_temperature)).to(device)
         self.log_alpha.requires_grad = True
         self.target_entropy = -np.prod(action_shape)
@@ -467,6 +469,7 @@ class CtmrSacAgent(object):
                              mtm_bsz=mtm_bsz, normalize_before=normalize_before,
                              dropout=dropout, attention_dropout=attention_dropout,
                              relu_dropout=relu_dropout).to(self.device)
+            
             self.encoder_optimizer = torch.optim.Adam(
                 self.critic.encoder.parameters(), lr=2*encoder_lr
             )
@@ -642,10 +645,10 @@ class CtmrSacAgent(object):
             L.log('train/batch_reward', reward.mean(), step)
 
 
-        # self.update_critic(obs, action, reward, next_obs, not_done, L, step)
+        self.update_critic(obs, action, reward, next_obs, not_done, L, step)
 
-        # if step % self.actor_update_freq == 0:
-        #     self.update_actor_and_alpha(obs, L, step)
+        if step % self.actor_update_freq == 0:
+            self.update_actor_and_alpha(obs, L, step)
 
         # if step % self.critic_target_update_freq == 0:
         #     utils.soft_update_params(
